@@ -1,0 +1,185 @@
+---
+title: "01 - Introdução ao R e ao Tidyverse"
+author: "Sillas Teixeira Gonzaga"
+date: "25 de março de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+```
+
+# Intro super básica
+
+## Como criar um objeto no R
+
+```{r}
+x <- 1
+x
+print(x)
+class(x)
+```
+
+## Tipos de objetos básicos no R
+
+```{r}
+# character
+x1 <- c("Sillas", "R")
+x2 <- c("Sillas", 1)
+# numeric e integer
+x1 <- 1:20
+x2 <- seq(1, 20, by = 2)
+# logical
+x1 <- TRUE
+x2 <- FALSE
+x1 == x2
+!x1 == x2
+```
+
+
+## Data frames
+
+São um tipo de objeto usado para armazenar dados em formato tabular, semelhante a uma tabela.
+  
+
+```{r}
+df <- data.frame(
+  x1 = c("a", "b", "c", "d"),
+  x2 = c(10, 15, 20, 25)
+)
+df
+str(df)
+
+```
+
+# Input de dados no R
+
+A principal função para ler arquivos no R é `read.table`
+
+```{r}
+?read.table
+```
+
+Funcões como `read.csv` e `read.csv2` são wrapers de `data.table`.
+
+```{r}
+df <- read.csv("https://raw.githubusercontent.com/sillasgonzaga/curso_redes_sociais/master/data/scielo_amostra.csv",
+               stringsAsFactors = FALSE)
+
+head(df)
+glimpse(df)
+```
+
+
+# Tidyverse
+
+https://www.tidyverse.org/
+
+## dplyr
+
+Principais funções:
+
+* filter()  
+* `select()` e `rename()`
+* `mutate()` e `transmute()`  
+* `summarise()`  
+
+### filter
+
+```{r}
+df <- as.tibble(df)
+?filter
+filter(df, area == "Engineering")
+filter(df, document_publishing_year >= 2017)
+filter(df, area == "Engineering" & document_publishing_year >= 2017)
+```
+
+### arrange
+
+```{r}
+?arrange
+arrange(df, document_publishing_year)
+arrange(df, desc(document_publishing_year))
+arrange(df, journal)
+
+```
+
+### select
+
+```{r}
+select(df, journal, author)
+select(df, 2, 3)
+select(df, area:author)
+select(df, -journal)
+select(df, -journal, -area)
+select(df, starts_with("author"))
+select_if(df, is.numeric)
+```
+
+### mutate
+
+```{r}
+mutate(df, journal_lower = tolower(journal))
+mutate(df, ytd = lubridate::year(Sys.Date()) - document_publishing_year)
+
+extrair_sobrenome <- function(x){
+  x <- strsplit(x, " ")[[1]]
+  x[length(x)]
+}
+
+transmute(df, author, author_last_name = extrair_sobrenome(author))
+```
+
+
+### summarise
+
+```{r}
+summarise(df, qtd_linhas = n())
+summarise_if(df, is.numeric, mean)
+summarise_if(df, is.character, n_distinct)
+
+# com pipe
+df %>% summarise(qtd_linhas = n())
+df %>% summarise_if(is.numeric, mean)
+df %>% summarise_if(is.character, n_distinct)
+
+
+
+```
+
+### group_by
+
+```{r}
+df %>% 
+  group_by(journal) %>% 
+  summarise(qtd = n()) %>% 
+  arrange(desc(qtd))
+
+```
+
+```{r}
+df %>% 
+  group_by(document_id) %>% 
+  summarise(qtd_autores = n_distinct(author)) %>% 
+  arrange(desc(qtd_autores))
+
+df %>% 
+  group_by(area, author_institution) %>% 
+  summarise(qtd = n_distinct(document_id)) %>% 
+  group_by(area) %>% 
+  mutate(tt_artigos = sum(qtd),
+         pct_artigos = qtd/tt_artigos) %>% 
+  filter(qtd == max(qtd)) %>% 
+  arrange(desc(pct_artigos))
+
+
+
+```
+
+
+
